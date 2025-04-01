@@ -72,6 +72,14 @@ double price_european_call(int           n,     // Number of Monte Carlo samples
   return option_price;
 }
 
+double bsm(double S, double K, double r, double sigma, double T) {
+  double d1  = (log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrt(T));
+  double d2  = d1 - sigma * sqrt(T);
+  double Nd1 = 0.5 * (1 + erf(d1 / sqrt(2)));
+  double Nd2 = 0.5 * (1 + erf(d2 / sqrt(2)));
+  return S * Nd1 - K * exp(-r * T) * Nd2;
+}
+
 int main() {
 
   // Option parameters
@@ -95,22 +103,32 @@ int main() {
   printf("  Monte Carlo samples: %d\n", n);
   printf("  Seed: %lu\n\n", seed);
 
+  // Black-Scholes
+  double bs_solution = bsm(S, K, r, sigma, T);
+  printf("Black-Scholes: %.6f\n\n", bs_solution);
+
   // Mersenne Twister
   double option_price =
       price_european_call(n, S, K, sigma, r, T, PRNG_MT, seed);
   printf("Monte Carlo with Mersenne Twister:\n");
   printf("  Price: %.6f\n", option_price);
+  printf("  Absolute error from Black-Scholes: %.6f\n",
+         fabs(option_price - bs_solution));
 
   // Sobol sequence
   option_price = price_european_call(n, S, K, sigma, r, T, PRNG_SOBOL, seed);
   printf("Monte Carlo with Sobol Sequence:\n");
   printf("  Price: %.6f\n", option_price);
+  printf("  Absolute error from Black-Scholes: %.6f\n",
+         fabs(option_price - bs_solution));
 
   // Antithetic variates with Mersenne Twister
   option_price =
       price_european_call(n, S, K, sigma, r, T, PRNG_ANTITHETIC_MT, seed);
   printf("Monte Carlo with Antithetic Variates:\n");
   printf("  Price: %.6f\n", option_price);
+  printf("  Absolute error from Black-Scholes: %.6f\n",
+         fabs(option_price - bs_solution));
 
   return 0;
 }
