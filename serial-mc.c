@@ -80,6 +80,26 @@ double bsm(double S, double K, double r, double sigma, double T) {
   return S * Nd1 - K * exp(-r * T) * Nd2;
 }
 
+void timing(int n, double S, double K, double sigma, double r, double T,
+            prng_type type, unsigned long seed, const char* prng_used,
+            double bs_solution) {
+  clock_t start, end;
+  double  cpu_time_used;
+  double  option_price;
+  start        = clock(); // Start the timer
+  option_price = price_european_call(n, S, K, sigma, r, T, type, seed);
+  end          = clock(); // End the timer
+  cpu_time_used =
+      ((double) (end - start)) / CLOCKS_PER_SEC; // Time taken in seconds
+
+  // Print results
+  printf("Monte Carlo with %s:\n", prng_used);
+  printf("  Price: %.6f\n", option_price);
+  printf("  Execution time: %.6f seconds\n\n", cpu_time_used);
+  printf("  Absolute error from Black-Scholes: %.6f\n",
+         fabs(option_price - bs_solution));
+}
+
 int main() {
 
   // Option parameters
@@ -107,28 +127,11 @@ int main() {
   double bs_solution = bsm(S, K, r, sigma, T);
   printf("Black-Scholes: %.6f\n\n", bs_solution);
 
-  // Mersenne Twister
-  double option_price =
-      price_european_call(n, S, K, sigma, r, T, PRNG_MT, seed);
-  printf("Monte Carlo with Mersenne Twister:\n");
-  printf("  Price: %.6f\n", option_price);
-  printf("  Absolute error from Black-Scholes: %.6f\n",
-         fabs(option_price - bs_solution));
-
-  // Sobol sequence
-  option_price = price_european_call(n, S, K, sigma, r, T, PRNG_SOBOL, seed);
-  printf("Monte Carlo with Sobol Sequence:\n");
-  printf("  Price: %.6f\n", option_price);
-  printf("  Absolute error from Black-Scholes: %.6f\n",
-         fabs(option_price - bs_solution));
-
-  // Antithetic variates with Mersenne Twister
-  option_price =
-      price_european_call(n, S, K, sigma, r, T, PRNG_ANTITHETIC_MT, seed);
-  printf("Monte Carlo with Antithetic Variates:\n");
-  printf("  Price: %.6f\n", option_price);
-  printf("  Absolute error from Black-Scholes: %.6f\n",
-         fabs(option_price - bs_solution));
+  // Run all PRNGs with timing
+  timing(n, S, K, sigma, r, T, PRNG_MT, seed, "Mersenne Twister", bs_solution);
+  timing(n, S, K, sigma, r, T, PRNG_SOBOL, seed, "Sobol sequence", bs_solution);
+  timing(n, S, K, sigma, r, T, PRNG_ANTITHETIC_MT, seed,
+         "Antithetic variates with Mersenne Twister", bs_solution);
 
   return 0;
 }
