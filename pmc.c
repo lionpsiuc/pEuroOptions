@@ -9,7 +9,8 @@
 #include <time.h>
 
 typedef enum {
-  PRNG_MT, // Mersenne Twister
+  PRNG_MT,           // Mersenne Twister
+  PRNG_ANTITHETIC_MT // Antithetic variates with Mersenne Twister
 } prng_type;
 
 double price_european_call(int           n,     // Number of Monte Carlo samples
@@ -24,6 +25,7 @@ double price_european_call(int           n,     // Number of Monte Carlo samples
   double total_payoff = 0.0;
   double mu_t         = (r - 0.5 * sigma * sigma) * T;
   double sigma_sqrt_t = sigma * sqrt(T);
+  double payoff, S_T, z;
   if (type == PRNG_MT) {
     gsl_rng* rng = gsl_rng_alloc(gsl_rng_mt19937);
     gsl_rng_set(rng, seed);
@@ -34,12 +36,39 @@ double price_european_call(int           n,     // Number of Monte Carlo samples
       gsl_rng_set(local_rng, seed + thread_id);
 #pragma omp for
       for (int i = 0; i < n; i++) {
-        double z      = gsl_ran_gaussian(local_rng, 1.0);
-        double S_T    = S * exp(mu_t + sigma_sqrt_t * z);
-        double payoff = S_T > K ? S_T - K : 0.0;
+        z      = gsl_ran_gaussian(local_rng, 1.0);
+        S_T    = S * exp(mu_t + sigma_sqrt_t * z);
+        payoff = S_T > K ? S_T - K : 0.0;
         total_payoff += payoff;
       }
       gsl_rng_free(local_rng);
+    }
+    gsl_rng_free(rng);
+  } else if (type == PRNG_ANTITHETIC_MT) {
+    gsl_rng* rng = gsl_rng_alloc(gsl_rng_mt19937);
+    gsl_rng_set(rng, seed);
+#pragma omp parallel reduction(+ : total_payoff)
+    {
+      gsl_rng* local_rng = gsl_rng_alloc(gsl_rng_mt19937);
+      int      thread_id = omp_get_thread_num();
+      gsl_rng_set(local_rng, seed + thread_id);
+#pragma omp for
+      for (int i = 0; i < n / 2; i++) {
+        z      = gsl_ran_gaussian(local_rng, 1.0);
+        S_T    = S * exp(mu_t + sigma_sqrt_t * z);
+        payoff = S_T > K ? S_T - K : 0.0;
+        total_payoff += payoff;
+        S_T    = S * exp(mu_t + sigma_sqrt_t * (-z));
+        payoff = S_T > K ? S_T - K : 0.0;
+        total_payoff += payoff;
+      }
+      gsl_rng_free(local_rng);
+    }
+    if (n % 2 != 0) {
+      z      = gsl_ran_gaussian(rng, 1.0);
+      S_T    = S * exp(mu_t + sigma_sqrt_t * z);
+      payoff = S_T > K ? S_T - K : 0.0;
+      total_payoff += payoff;
     }
     gsl_rng_free(rng);
   }
@@ -85,7 +114,7 @@ int main() {
   double T     = 1.0;   // Time to expiry
 
   // Monte Carlo parameters
-  int           n    = 1000000000; // Number of samples
+  int           n    = 100000;     // Number of samples
   unsigned long seed = time(NULL); // Seed from current time
 
   // Print parameters used
@@ -101,10 +130,12 @@ int main() {
 
   // Black-Scholes
   double bs_solution = bsm(S, K, r, sigma, T);
-  printf("Black-Scholes analytical solution: %.6f\n\n", bs_solution);
+  printf("Black-Scholes: %.6f\n\n", bs_solution);
 
   // Run all PRNGs with timing
   timing(n, S, K, sigma, r, T, PRNG_MT, seed, "Mersenne Twister", bs_solution);
+  timing(n, S, K, sigma, r, T, PRNG_ANTITHETIC_MT, seed,
+         "Antithetic variates with Mersenne Twister", bs_solution);
 
   return 0;
 }
