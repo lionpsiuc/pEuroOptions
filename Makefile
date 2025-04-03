@@ -1,6 +1,8 @@
 # Compiler
 CC = gcc
 CCFLAGS = -std=c2x -Wall -Wextra
+MPICC = mpicc
+MPIFLAGS = -std=c2x -Wall -Wextra
 
 # Flags
 GSL = -lgsl -lgslcblas
@@ -18,9 +20,13 @@ all: $(EXES)
 mc: mc.c
 	$(CC) $(CCFLAGS) -o $@ $< $(GSL) $(LDFLAGS)
 
-# Parallel
-pmc: pmc.c
+#OpenMP
+ompmc: ompmc.c
 	$(CC) $(CCFLAGS) $(OMP) -o $@ $< $(GSL) $(LDFLAGS)
+
+# MPI
+mpimc: mpimc.c
+	$(MPICC) $(MPIFLAGS) -o $@ $< $(GSL) $(LDFLAGS)
 
 # Clean target
 .PHONY: clean
