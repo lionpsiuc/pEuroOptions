@@ -1,3 +1,13 @@
+/**
+ * @file mc.c
+ *
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ *
+ * @author Ion Lipsiuc
+ */
+
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_qrng.h>
 #include <gsl/gsl_randist.h>
@@ -7,12 +17,33 @@
 #include <stdlib.h>
 #include <time.h>
 
+/**
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ */
 typedef enum {
   PRNG_MT,           // Mersenne Twister
   PRNG_SOBOL,        // Sobol sequence
   PRNG_ANTITHETIC_MT // Antithetic variates with Mersenne Twister
 } prng_type;
 
+/**
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ *
+ * @param n Explain briefly in one sentence.
+ * @param S Explain briefly in one sentence.
+ * @param K Explain briefly in one sentence.
+ * @param sigma Explain briefly in one sentence.
+ * @param r Explain briefly in one sentence.
+ * @param T Explain briefly in one sentence.
+ * @param type Explain briefly in one sentence.
+ * @param seed Explain briefly in one sentence.
+ *
+ * @return Explain briefly in one sentence.
+ */
 double price_european_call(int           n,     // Number of Monte Carlo samples
                            double        S,     // Spot price today
                            double        K,     // Strike price
@@ -72,7 +103,20 @@ double price_european_call(int           n,     // Number of Monte Carlo samples
   return option_price;
 }
 
-double bsm(double S, double K, double r, double sigma, double T) {
+/**
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ *
+ * @param S Explain briefly in one sentence.
+ * @param K Explain briefly in one sentence.
+ * @param sigma Explain briefly in one sentence.
+ * @param r Explain briefly in one sentence.
+ * @param T Explain briefly in one sentence.
+ *
+ * @return Explain briefly in one sentence.
+ */
+double bsm(double S, double K, double sigma, double r, double T) {
   double d1  = (log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrt(T));
   double d2  = d1 - sigma * sqrt(T);
   double Nd1 = 0.5 * (1 + erf(d1 / sqrt(2)));
@@ -80,6 +124,22 @@ double bsm(double S, double K, double r, double sigma, double T) {
   return S * Nd1 - K * exp(-r * T) * Nd2;
 }
 
+/**
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ *
+ * @param n Explain briefly in one sentence.
+ * @param S Explain briefly in one sentence.
+ * @param K Explain briefly in one sentence.
+ * @param sigma Explain briefly in one sentence.
+ * @param r Explain briefly in one sentence.
+ * @param T Explain briefly in one sentence.
+ * @param type Explain briefly in one sentence.
+ * @param seed Explain briefly in one sentence.
+ * @param prng_used Explain briefly in one sentence.
+ * @param bs_solution Explain briefly in one sentence.
+ */
 void timing(int n, double S, double K, double sigma, double r, double T,
             prng_type type, unsigned long seed, const char* prng_used,
             double bs_solution) {
@@ -100,6 +160,13 @@ void timing(int n, double S, double K, double sigma, double r, double T,
          fabs(option_price - bs_solution));
 }
 
+/**
+ * @brief Main function.
+ *
+ * Further explanation, if required.
+ *
+ * @return 0 on successful completion.
+ */
 int main() {
 
   // Option parameters

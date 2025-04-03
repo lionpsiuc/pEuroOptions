@@ -1,3 +1,13 @@
+/**
+ * @file mpimc.c
+ *
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ *
+ * @author Ion Lipsiuc
+ */
+
 #include <gsl/gsl_cdf.h>
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_rng.h>
@@ -7,11 +17,34 @@
 #include <stdlib.h>
 #include <time.h>
 
+/**
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ */
 typedef enum {
   PRNG_MT,           // Mersenne Twister
   PRNG_ANTITHETIC_MT // Antithetic variates with Mersenne Twister
 } prng_type;
 
+/**
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ *
+ * @param local_n Explain briefly in one sentence.
+ * @param S Explain briefly in one sentence.
+ * @param K Explain briefly in one sentence.
+ * @param sigma Explain briefly in one sentence.
+ * @param r Explain briefly in one sentence.
+ * @param T Explain briefly in one sentence.
+ * @param type Explain briefly in one sentence.
+ * @param seed Explain briefly in one sentence.
+ * @param rank Explain briefly in one sentence.
+ * @param size Explain briefly in one sentence.
+ *
+ * @return Explain briefly in one sentence.
+ */
 double price_european_call_local(
     int           local_n, // Local number of samples for this process
     double        S,       // Spot price today
@@ -63,7 +96,20 @@ double price_european_call_local(
   return local_payoff;
 }
 
-double bsm(double S, double K, double r, double sigma, double T) {
+/**
+ * @brief Explain briefly in one sentence.
+ *
+ * Further explanation, if required.
+ *
+ * @param S Explain briefly in one sentence.
+ * @param K Explain briefly in one sentence.
+ * @param sigma Explain briefly in one sentence.
+ * @param r Explain briefly in one sentence.
+ * @param T Explain briefly in one sentence.
+ *
+ * @return Explain briefly in one sentence.
+ */
+double bsm(double S, double K, double sigma, double r, double T) {
   double d1  = (log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrt(T));
   double d2  = d1 - sigma * sqrt(T);
   double Nd1 = 0.5 * (1 + erf(d1 / sqrt(2)));
@@ -71,6 +117,16 @@ double bsm(double S, double K, double r, double sigma, double T) {
   return S * Nd1 - K * exp(-r * T) * Nd2;
 }
 
+/**
+ * @brief Main function.
+ *
+ * Further explanation, if required.
+ *
+ * @param argc Explain briefly in one sentence.
+ * @param argv Explain briefly in one sentence.
+ *
+ * @return 0 on successful completion.
+ */
 int main(int argc, char* argv[]) {
   int rank, size;
 
