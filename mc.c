@@ -1,9 +1,12 @@
 /**
  * @file mc.c
  *
- * @brief Explain briefly in one sentence.
+ * @brief Serial Monte Carlo pricer for European options.
  *
- * Further explanation, if required.
+ * This file implements a Monte Carlo simulation for pricing European call
+ * options using different pseudo-random number generators (PRNGs) and variance
+ * reduction techniques. The implementation compares results with the analytical
+ * Black-Scholes solution.
  *
  * @author Ion Lipsiuc
  */
@@ -18,9 +21,7 @@
 #include <time.h>
 
 /**
- * @brief Explain briefly in one sentence.
- *
- * Further explanation, if required.
+ * @brief Enumeration of supported PRNGs.
  */
 typedef enum {
   PRNG_MT,           // Mersenne Twister
@@ -29,30 +30,21 @@ typedef enum {
 } prng_type;
 
 /**
- * @brief Explain briefly in one sentence.
+ * @brief Prices a European call option using Monte Carlo simulation.
  *
- * Further explanation, if required.
+ * @param n Number of Monte Carlo samples to use in the simulation.
+ * @param S Spot price of the underlying asset today.
+ * @param K Strike price of the option.
+ * @param sigma Annual volatility of the underlying asset.
+ * @param r Risk-free interest rate.
+ * @param T Time to expiry in years.
+ * @param type Type of PRNG to use from the prng_type enum.
+ * @param seed Seed value for the random number generator.
  *
- * @param n Explain briefly in one sentence.
- * @param S Explain briefly in one sentence.
- * @param K Explain briefly in one sentence.
- * @param sigma Explain briefly in one sentence.
- * @param r Explain briefly in one sentence.
- * @param T Explain briefly in one sentence.
- * @param type Explain briefly in one sentence.
- * @param seed Explain briefly in one sentence.
- *
- * @return Explain briefly in one sentence.
+ * @return The estimated price of the European call option.
  */
-double price_european_call(int           n,     // Number of Monte Carlo samples
-                           double        S,     // Spot price today
-                           double        K,     // Strike price
-                           double        sigma, // Annual volatility
-                           double        r,     // Risk-free interest rate
-                           double        T,     // Time to expiry in years
-                           prng_type     type,  // Type of PRNG to use
-                           unsigned long seed   // Seed for PRNG
-) {
+double price_european_call(int n, double S, double K, double sigma, double r,
+                           double T, prng_type type, unsigned long seed) {
   double total_payoff = 0.0;
   double mu_t         = (r - 0.5 * sigma * sigma) * T;
   double sigma_sqrt_t = sigma * sqrt(T);
@@ -104,17 +96,21 @@ double price_european_call(int           n,     // Number of Monte Carlo samples
 }
 
 /**
- * @brief Explain briefly in one sentence.
+ * @brief Calculates the price of a European call option using the Black-Scholes
+ *        formula.
  *
- * Further explanation, if required.
+ * This function implements the analytical Black-Scholes formula for pricing
+ * a European call option, which serves as a benchmark for the Monte Carlo
+ * estimates.
  *
- * @param S Explain briefly in one sentence.
- * @param K Explain briefly in one sentence.
- * @param sigma Explain briefly in one sentence.
- * @param r Explain briefly in one sentence.
- * @param T Explain briefly in one sentence.
+ * @param S Spot price of the underlying asset today.
+ * @param K Strike price of the option.
+ * @param sigma Annual volatility of the underlying asset.
+ * @param r Risk-free interest rate.
+ * @param T Time to expiry in years.
  *
- * @return Explain briefly in one sentence.
+ * @return The exact price of the European call option according to the
+ *         Black-Scholes formula.
  */
 double bsm(double S, double K, double sigma, double r, double T) {
   double d1  = (log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrt(T));
@@ -125,20 +121,22 @@ double bsm(double S, double K, double sigma, double r, double T) {
 }
 
 /**
- * @brief Explain briefly in one sentence.
+ * @brief Executes and times a Monte Carlo simulation using a specified PRNG.
  *
- * Further explanation, if required.
+ * This function runs a Monte Carlo simulation with the given parameters,
+ * measures the execution time, and compares the result to the analytical
+ * Black-Scholes solution.
  *
- * @param n Explain briefly in one sentence.
- * @param S Explain briefly in one sentence.
- * @param K Explain briefly in one sentence.
- * @param sigma Explain briefly in one sentence.
- * @param r Explain briefly in one sentence.
- * @param T Explain briefly in one sentence.
- * @param type Explain briefly in one sentence.
- * @param seed Explain briefly in one sentence.
- * @param prng_used Explain briefly in one sentence.
- * @param bs_solution Explain briefly in one sentence.
+ * @param n Number of Monte Carlo samples to use in the simulation.
+ * @param S Spot price of the underlying asset today.
+ * @param K Strike price of the option.
+ * @param sigma Annual volatility of the underlying asset.
+ * @param r Risk-free interest rate.
+ * @param T Time to expiry in years.
+ * @param type Type of PRNG to use from the prng_type enum.
+ * @param seed Seed value for the random number generator.
+ * @param prng_used String description of the PRNG method for output.
+ * @param bs_solution The Black-Scholes analytical solution for comparison.
  */
 void timing(int n, double S, double K, double sigma, double r, double T,
             prng_type type, unsigned long seed, const char* prng_used,
@@ -155,15 +153,17 @@ void timing(int n, double S, double K, double sigma, double r, double T,
   // Print results
   printf("Monte Carlo with %s:\n", prng_used);
   printf("  Price: %.6f\n", option_price);
-  printf("  Execution time: %.6f seconds\n\n", cpu_time_used);
-  printf("  Absolute error from Black-Scholes: %.6f\n",
+  printf("  Execution time: %.6f seconds\n", cpu_time_used);
+  printf("  Absolute error from Black-Scholes: %.6f\n\n",
          fabs(option_price - bs_solution));
 }
 
 /**
  * @brief Main function.
  *
- * Further explanation, if required.
+ * This function sets up the option parameters, runs the Black-Scholes
+ * calculation, and executes Monte Carlo simulations with different PRNGs,
+ * comparing the performance and accuracy of each approach.
  *
  * @return 0 on successful completion.
  */
@@ -177,7 +177,7 @@ int main() {
   double T     = 1.0;   // Time to expiry
 
   // Monte Carlo parameters
-  int           n    = 10000;      // Number of samples
+  int           n    = 10000000;   // Number of samples
   unsigned long seed = time(NULL); // Seed from current time
 
   // Print parameters used
@@ -191,7 +191,7 @@ int main() {
   printf("  Seed: %lu\n\n", seed);
 
   // Black-Scholes
-  double bs_solution = bsm(S, K, r, sigma, T);
+  double bs_solution = bsm(S, K, sigma, r, T);
   printf("Black-Scholes: %.6f\n\n", bs_solution);
 
   // Run all PRNGs with timing

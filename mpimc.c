@@ -1,9 +1,12 @@
 /**
  * @file mpimc.c
  *
- * @brief Explain briefly in one sentence.
+ * @brief MPI-parallelised Monte Carlo pricer for European options.
  *
- * Further explanation, if required.
+ * This file implements a parallel Monte Carlo simulation using MPI for pricing
+ * European call options with different pseudo-random number generators (PRNGs)
+ * and variance reduction techniques. The implementation compares results with
+ * the analytical Black-Scholes solution.
  *
  * @author Ion Lipsiuc
  */
@@ -18,9 +21,7 @@
 #include <time.h>
 
 /**
- * @brief Explain briefly in one sentence.
- *
- * Further explanation, if required.
+ * @brief Enumeration of supported PRNGs.
  */
 typedef enum {
   PRNG_MT,           // Mersenne Twister
@@ -28,35 +29,29 @@ typedef enum {
 } prng_type;
 
 /**
- * @brief Explain briefly in one sentence.
+ * @brief Prices a European call option using local Monte Carlo samples for MPI
+ *        distribution.
  *
- * Further explanation, if required.
+ * This function implements the local portion of a distributed Monte Carlo
+ * simulation to price a European call option. Each MPI process calculates its
+ * contribution to the total payoff based on a subset of the total samples.
  *
- * @param local_n Explain briefly in one sentence.
- * @param S Explain briefly in one sentence.
- * @param K Explain briefly in one sentence.
- * @param sigma Explain briefly in one sentence.
- * @param r Explain briefly in one sentence.
- * @param T Explain briefly in one sentence.
- * @param type Explain briefly in one sentence.
- * @param seed Explain briefly in one sentence.
- * @param rank Explain briefly in one sentence.
- * @param size Explain briefly in one sentence.
+ * @param local_n Local number of Monte Carlo samples for this specific MPI
+ *                process.
+ * @param S Spot price of the underlying asset today.
+ * @param K Strike price of the option.
+ * @param sigma Annual volatility of the underlying asset.
+ * @param r Risk-free interest rate.
+ * @param T Time to expiry in years.
+ * @param type Type of PRNG to use from the prng_type enum.
+ * @param seed Seed value for the random number generator.
+ * @param rank Process rank in the MPI communication.
  *
- * @return Explain briefly in one sentence.
+ * @return The local contribution to the total payoff sum.
  */
-double price_european_call_local(
-    int           local_n, // Local number of samples for this process
-    double        S,       // Spot price today
-    double        K,       // Strike price
-    double        sigma,   // Annual volatility
-    double        r,       // Risk-free interest rate
-    double        T,       // Time to expiry in years
-    prng_type     type,    // Type of PRNG to use
-    unsigned long seed,    // Base seed for PRNG
-    int           rank,    // Process rank
-    int           size     // Total number of processes
-) {
+double price_european_call_local(int local_n, double S, double K, double sigma,
+                                 double r, double T, prng_type type,
+                                 unsigned long seed, int rank) {
   double local_payoff = 0.0;
   double mu_t         = (r - 0.5 * sigma * sigma) * T;
   double sigma_sqrt_t = sigma * sqrt(T);
@@ -97,17 +92,21 @@ double price_european_call_local(
 }
 
 /**
- * @brief Explain briefly in one sentence.
+ * @brief Calculates the price of a European call option using the Black-Scholes
+ *        formula.
  *
- * Further explanation, if required.
+ * This function implements the analytical Black-Scholes formula for pricing
+ * a European call option, which serves as a benchmark for the Monte Carlo
+ * estimates.
  *
- * @param S Explain briefly in one sentence.
- * @param K Explain briefly in one sentence.
- * @param sigma Explain briefly in one sentence.
- * @param r Explain briefly in one sentence.
- * @param T Explain briefly in one sentence.
+ * @param S Spot price of the underlying asset today.
+ * @param K Strike price of the option.
+ * @param sigma Annual volatility of the underlying asset.
+ * @param r Risk-free interest rate.
+ * @param T Time to expiry in years.
  *
- * @return Explain briefly in one sentence.
+ * @return The exact price of the European call option according to the
+ *         Black-Scholes formula.
  */
 double bsm(double S, double K, double sigma, double r, double T) {
   double d1  = (log(S / K) + (r + 0.5 * sigma * sigma) * T) / (sigma * sqrt(T));
@@ -120,10 +119,13 @@ double bsm(double S, double K, double sigma, double r, double T) {
 /**
  * @brief Main function.
  *
- * Further explanation, if required.
+ * This function initialises the MPI environment, sets up the option parameters,
+ * distributes the workload among MPI processes, runs the Black-Scholes
+ * calculation, and executes distributed Monte Carlo simulations with different
+ * PRNGs, comparing the performance and accuracy of each approach.
  *
- * @param argc Explain briefly in one sentence.
- * @param argv Explain briefly in one sentence.
+ * @param argc Number of command-line arguments.
+ * @param argv Array of command-line argument strings.
  *
  * @return 0 on successful completion.
  */
@@ -143,7 +145,7 @@ int main(int argc, char* argv[]) {
   double T     = 1.0;   // Time to expiry
 
   // Monte Carlo parameters
-  int           n    = 1000000000; // Number of samples
+  int           n    = 10000000;   // Number of samples
   unsigned long seed = time(NULL); // Seed from current time
 
   // Ensure all processes use the same seed
@@ -172,7 +174,7 @@ int main(int argc, char* argv[]) {
     printf("  Number of processes: %d\n\n", size);
 
     // Calculate Black-Scholes solution
-    bs_solution = bsm(S, K, r, sigma, T);
+    bs_solution = bsm(S, K, sigma, r, T);
 
     printf("Black-Scholes: %.6f\n\n", bs_solution);
   }
@@ -189,7 +191,7 @@ int main(int argc, char* argv[]) {
 
     // Calculate local contribution to the payoff
     double local_payoff = price_european_call_local(local_n, S, K, sigma, r, T,
-                                                    types[i], seed, rank, size);
+                                                    types[i], seed, rank);
 
     // Gather all local payoffs and sum them
     double total_payoff;
